@@ -4,6 +4,7 @@ const content = await fetch("./content.json").then((response) => response.json()
 const storageKey = "equipment-diagnostics-progress-v1";
 let progress = safeProgress(localStorage.getItem(storageKey));
 let currentModule = content.modules.find((module) => module.id === progress.current) || content.modules[0];
+let currentSymptom = "1x";
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
@@ -86,8 +87,13 @@ function completeModule() {
 }
 
 function renderDiagnostic() {
-  const result = diagnose($("#symptom-select").value);
-  $("#diagnostic-result").innerHTML = `<h2>${escapeHtml(result.title)}</h2><div class="diagnostic-columns"><div><h3>Возможные причины</h3><ul>${result.causes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div><div><h3>Чем различить</h3><ol>${result.checks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></div><p class="caution"><strong>Важно:</strong> ${escapeHtml(result.caution)}</p></div>`;
+  const result = diagnose(currentSymptom);
+  $$('[data-symptom]').forEach((button) => {
+    const active = button.dataset.symptom === currentSymptom;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  $("#diagnostic-result").innerHTML = `<p class="step-kicker">Шаги 2 и 3</p><h2>${escapeHtml(result.title)}</h2><p class="result-lead">Не выбирайте причину только по одному признаку. Сначала составьте список версий, затем отделите их измерениями.</p><div class="diagnostic-columns"><section class="diagnostic-card causes-card"><span class="card-number">02</span><h3>Что может быть причиной</h3><ul>${result.causes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section class="diagnostic-card checks-card"><span class="card-number">03</span><h3>Что проверить</h3><ol>${result.checks.map((item, index) => `<li class="${index === 0 ? "priority-check" : ""}">${index === 0 ? '<strong>Начните с этого:</strong> ' : ""}${escapeHtml(item)}</li>`).join("")}</ol></section><p class="caution"><strong>Ограничение:</strong> ${escapeHtml(result.caution)}</p></div>`;
 }
 
 function setupCalculators() {
@@ -154,6 +160,11 @@ document.addEventListener("click", (event) => {
 });
 $("#continue-button").addEventListener("click", () => showView("course"));
 $("#module-search").addEventListener("input", (event) => renderModuleList(event.target.value));
-$("#symptom-select").addEventListener("change", renderDiagnostic);
+document.addEventListener("click", (event) => {
+  const symptom = event.target.closest("[data-symptom]");
+  if (!symptom) return;
+  currentSymptom = symptom.dataset.symptom;
+  renderDiagnostic();
+});
 $("#glossary-search").addEventListener("input", (event) => renderGlossary(event.target.value));
 setupCalculators(); setupOrbit(); renderModuleList(); renderDiagnostic(); renderGlossary(); updateProgress();

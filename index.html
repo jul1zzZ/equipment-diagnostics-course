@@ -89,15 +89,21 @@
     <section class="view workspace" id="trainer-view" data-view-panel="trainer">
       <div class="workspace-intro"><p>Диагностический тренажёр</p><h1>Начните с наблюдаемого признака</h1><p>Тренажёр не угадывает поломку. Он показывает несколько возможных причин и измерение, которое поможет их различить.</p></div>
       <div id="trainer-panel" class="trainer-panel">
-        <label for="symptom-select">Что вы наблюдаете?</label>
-        <select id="symptom-select">
-          <option value="1x">Сильная составляющая 1X</option>
-          <option value="2x">Сильная составляющая 2X</option>
-          <option value="sub">Вибрация ниже 1X</option>
-          <option value="pressure">Медленные колебания давления</option>
-          <option value="impact">Удары и высокие частоты</option>
-        </select>
-        <div id="diagnostic-result"></div>
+        <aside class="symptom-picker">
+          <p class="step-kicker">Шаг 1</p>
+          <h2>Что вы наблюдаете?</h2>
+          <div class="symptom-options" role="group" aria-label="Выберите наблюдаемый признак">
+            <button class="symptom-option active" data-symptom="1x" aria-pressed="true"><span>1X</span><strong>Одна частота вращения</strong><small>В спектре заметно преобладает 1X</small></button>
+            <button class="symptom-option" data-symptom="2x" aria-pressed="false"><span>2X</span><strong>Удвоенная частота</strong><small>Выражена составляющая 2X</small></button>
+            <button class="symptom-option" data-symptom="sub" aria-pressed="false"><span>&lt;1X</span><strong>Ниже частоты вращения</strong><small>Есть субсинхронная вибрация</small></button>
+            <button class="symptom-option" data-symptom="pressure" aria-pressed="false"><span>ΔP</span><strong>Колебания давления</strong><small>Давление и расход меняются медленно</small></button>
+            <button class="symptom-option" data-symptom="impact" aria-pressed="false"><span>HF</span><strong>Удары и высокие частоты</strong><small>В сигнале появились импульсы</small></button>
+          </div>
+        </aside>
+        <section class="trainer-result-shell" aria-label="Результат разбора">
+          <div class="diagnostic-flow" aria-label="Этапы диагностики"><span>1. Признак</span><span>2. Возможные причины</span><span>3. Проверка</span></div>
+          <div id="diagnostic-result" aria-live="polite"></div>
+        </section>
       </div>
     </section>
 
