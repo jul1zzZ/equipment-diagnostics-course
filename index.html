@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Интерактивный курс по диагностике оборудования и механическим вибрациям простым языком.">
+  <title>Диагностика оборудования — учебный тренажёр</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержанию</a>
+  <header class="topbar">
+    <button class="brand" data-view="dashboard" aria-label="Открыть главную">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+      <span><strong>Диагностика</strong><small>учебный тренажёр</small></span>
+    </button>
+    <nav class="main-nav" aria-label="Разделы сайта">
+      <button data-view="dashboard" class="active">Обзор</button>
+      <button data-view="course">Курс</button>
+      <button data-view="trainer">Тренажёр</button>
+      <button data-view="tools">Калькуляторы</button>
+      <button data-view="glossary">Словарь</button>
+    </nav>
+    <div class="header-progress" aria-label="Общий прогресс">
+      <span id="header-progress-value">0%</span>
+      <span class="progress-track"><i id="header-progress-bar"></i></span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="view active" id="dashboard-view" data-view-panel="dashboard">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="signal-label">Сначала понять — потом измерять</p>
+          <h1>Увидьте, как машина «говорит» о неисправности</h1>
+          <p class="hero-lead">Курс ведёт от простого движения ротора к проверенному диагнозу. Без перегруженных определений и без угадывания по одному графику.</p>
+          <div class="hero-actions">
+            <button class="primary" id="continue-button">Начать с первой главы</button>
+            <button class="text-button" data-view="trainer">Разобрать симптом</button>
+          </div>
+          <dl class="course-facts">
+            <div><dt>17</dt><dd>понятных модулей</dd></div>
+            <div><dt>5</dt><dd>рабочих инструментов</dd></div>
+            <div><dt>1</dt><dd>правило: проверять причину</dd></div>
+          </dl>
+        </div>
+        <div class="orbit-lab" aria-labelledby="orbit-title">
+          <div class="lab-heading">
+            <div><span>Живая модель</span><h2 id="orbit-title">Орбита ротора</h2></div>
+            <output id="orbit-status">Устойчивое движение</output>
+          </div>
+          <canvas id="orbit-canvas" width="720" height="470" aria-label="Модель движения центра вала"></canvas>
+          <div class="lab-controls">
+            <label>Скорость <strong><output id="speed-value">3000</output> об/мин</strong><input id="speed-control" type="range" min="500" max="9000" value="3000" step="100"></label>
+            <label>Демпфирование <strong><output id="damping-value">среднее</output></strong><input id="damping-control" type="range" min="1" max="10" value="6"></label>
+          </div>
+          <p class="lab-note">Чем меньше демпфирование около критической скорости, тем сильнее система раскачивается.</p>
+        </div>
+      </div>
+
+      <section class="path-section" aria-labelledby="path-title">
+        <div class="section-heading"><div><p>Учебный путь</p><h2 id="path-title">От устройства машины к решению</h2></div><button class="text-button" data-view="course">Открыть все главы</button></div>
+        <div class="learning-path">
+          <button data-module="chapter-2"><span>Машина</span><strong>Что создаёт силу</strong></button>
+          <button data-module="chapter-4"><span>Измерение</span><strong>Что видит датчик</strong></button>
+          <button data-module="chapter-6"><span>Сигнал</span><strong>Какие есть признаки</strong></button>
+          <button data-module="chapter-7"><span>Неисправность</span><strong>Какая причина подходит</strong></button>
+          <button data-module="chapter-16"><span>Диагноз</span><strong>Чем подтвердить</strong></button>
+        </div>
+      </section>
+
+      <section class="tool-deck" aria-labelledby="tools-title">
+        <div class="section-heading"><div><p>Практика</p><h2 id="tools-title">Не только читать</h2></div></div>
+        <button data-view="trainer"><span class="tool-icon">◎</span><strong>Тренажёр диагностики</strong><small>Выберите признак и сравните возможные причины.</small></button>
+        <button data-view="tools"><span class="tool-icon">ƒ</span><strong>Инженерные калькуляторы</strong><small>Переведите обороты в герцы и рассчитайте ожидаемые частоты.</small></button>
+        <button data-view="glossary"><span class="tool-icon">Aa</span><strong>Словарь без сложных слов</strong><small>Найдите термин и сразу получите короткое объяснение.</small></button>
+      </section>
+    </section>
+
+    <section class="view course-view" id="course-view" data-view-panel="course">
+      <aside class="course-map">
+        <div class="map-head"><p>Карта курса</p><input id="module-search" type="search" placeholder="Найти тему" aria-label="Найти тему курса"></div>
+        <div id="module-list"></div>
+      </aside>
+      <article class="lesson" id="lesson-content" tabindex="-1"></article>
+      <aside class="lesson-rail" id="lesson-rail"></aside>
+    </section>
+
+    <section class="view workspace" id="trainer-view" data-view-panel="trainer">
+      <div class="workspace-intro"><p>Диагностический тренажёр</p><h1>Начните с наблюдаемого признака</h1><p>Тренажёр не угадывает поломку. Он показывает несколько возможных причин и измерение, которое поможет их различить.</p></div>
+      <div id="trainer-panel" class="trainer-panel">
+        <label for="symptom-select">Что вы наблюдаете?</label>
+        <select id="symptom-select">
+          <option value="1x">Сильная составляющая 1X</option>
+          <option value="2x">Сильная составляющая 2X</option>
+          <option value="sub">Вибрация ниже 1X</option>
+          <option value="pressure">Медленные колебания давления</option>
+          <option value="impact">Удары и высокие частоты</option>
+        </select>
+        <div id="diagnostic-result"></div>
+      </div>
+    </section>
+
+    <section class="view workspace" id="tools-view" data-view-panel="tools">
+      <div class="workspace-intro"><p>Инженерные калькуляторы</p><h1>Посчитайте ожидаемые частоты</h1><p>Результат помогает понять, где искать компоненту в спектре. Совпадение частоты ещё не доказывает неисправность.</p></div>
+      <div id="calculator-panel" class="calculator-grid">
+        <form id="rotation-form" class="calc-card"><h2>Частота вращения</h2><p><code>f = n / 60</code></p><label>Обороты, об/мин<input name="rpm" type="number" min="0" value="3000"></label><button class="primary">Рассчитать</button><output></output></form>
+        <form id="blade-form" class="calc-card"><h2>Лопаточная частота</h2><p><code>fлоп = Z × fвр</code></p><label>Обороты, об/мин<input name="rpm" type="number" min="0" value="3000"></label><label>Число лопаток<input name="count" type="number" min="1" value="12"></label><button class="primary">Рассчитать</button><output></output></form>
+        <form id="mesh-form" class="calc-card"><h2>Частота зацепления</h2><p><code>fзац = Z × fвр</code></p><label>Обороты колеса<input name="rpm" type="number" min="0" value="1500"></label><label>Число зубьев<input name="count" type="number" min="1" value="40"></label><button class="primary">Рассчитать</button><output></output></form>
+        <form id="velocity-form" class="calc-card"><h2>Скорость вибрации</h2><p><code>vпик = 2πf × xпик</code></p><label>Частота, Гц<input name="frequency" type="number" min="0" value="50"></label><label>Пиковое перемещение, мм<input name="displacement" type="number" min="0" step="0.001" value="0.1"></label><button class="primary">Рассчитать</button><output></output></form>
+      </div>
+    </section>
+
+    <section class="view workspace" id="glossary-view" data-view-panel="glossary">
+      <div class="workspace-intro"><p>Словарь</p><h1>Термины нормальным языком</h1><p>Введите слово по-русски или по-английски. Нажмите на карточку, чтобы раскрыть полное определение.</p></div>
+      <div id="glossary-panel"><input id="glossary-search" type="search" placeholder="Например: демпфирование" aria-label="Поиск по словарю"><div id="glossary-list" class="glossary-list"></div></div>
+    </section>
+  </main>
+
+  <nav class="mobile-nav" aria-label="Мобильная навигация">
+    <button data-view="dashboard">Обзор</button><button data-view="course">Курс</button><button data-view="trainer">Тренажёр</button><button data-view="tools">Расчёты</button><button data-view="glossary">Словарь</button>
+  </nav>
+  <div class="sr-status" aria-live="polite" id="live-status"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

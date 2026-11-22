@@ -1,0 +1,90 @@
+export function rotationalFrequency(rpm) {
+  const value = Number(rpm);
+  return Number.isFinite(value) && value >= 0 ? value / 60 : null;
+}
+
+export function bladePassFrequency(rpm, blades) {
+  const frequency = rotationalFrequency(rpm);
+  const count = Number(blades);
+  return frequency !== null && Number.isFinite(count) && count > 0 ? frequency * count : null;
+}
+
+export function meshFrequency(rpm, teeth) {
+  return bladePassFrequency(rpm, teeth);
+}
+
+export function vibrationVelocity(frequencyHz, displacementPeakMm) {
+  const frequency = Number(frequencyHz);
+  const displacement = Number(displacementPeakMm);
+  if (!Number.isFinite(frequency) || !Number.isFinite(displacement) || frequency < 0 || displacement < 0 || frequencyHz === "") return null;
+  return 2 * Math.PI * frequency * displacement;
+}
+
+const DIAGNOSTICS = {
+  "1x": {
+    title: "Сильная составляющая 1X",
+    causes: ["Дисбаланс", "Несоосность", "Прогиб ротора", "Ослабление крепления", "Резонанс", "Технологическая сила"],
+    checks: ["Сравнить фазу на обеих опорах", "Проверить осевую вибрацию и центровку", "Посмотреть изменение при разгоне, выбеге и прогреве", "Проверить биение и крепления"],
+    caution: "Одна компонента 1X не является диагнозом. Причину подтверждают независимой проверкой.",
+  },
+  "2x": {
+    title: "Сильная составляющая 2X",
+    causes: ["Несоосность", "Ослабление", "Нелинейная жёсткость", "Эллиптичность", "Контакт деталей"],
+    checks: ["Измерить осевую вибрацию", "Сравнить фазы по обе стороны муфты", "Проверить мягкую лапу и крепления"],
+    caution: "2X часто встречается при несоосности, но сама по себе её не доказывает.",
+  },
+  sub: {
+    title: "Субсинхронная вибрация ниже 1X",
+    causes: ["Масляный вихрь", "Масляный хлыст", "Аэродинамическая неустойчивость", "Вращающийся срыв", "Задевание"],
+    checks: ["Определить направление прецессии", "Сравнить частоту со скоростью вращения", "Проверить давление газа, температуру и вязкость масла", "Записать разгон и выбег"],
+    caution: "Нужно отделить влияние подшипника, потока и контакта по зависимости от режима.",
+  },
+  pressure: {
+    title: "Низкочастотные колебания давления и расхода",
+    causes: ["Помпаж", "Неустойчивая сеть", "Работа регулирующего клапана", "Пульсации поршневой машины"],
+    checks: ["Сопоставить рабочую точку с картой компрессора", "Проверить последовательность давления, расхода и положения клапана", "Оценить возможный обратный поток"],
+    caution: "Помпаж относится ко всей системе компрессор–сеть, поэтому одной вибрации недостаточно.",
+  },
+  impact: {
+    title: "Удары и высокочастотная вибрация",
+    causes: ["Дефект подшипника качения", "Задевание", "Ослабление", "Повреждение зуба", "Недостаток смазки"],
+    checks: ["Посмотреть временную форму", "Выполнить анализ огибающей", "Проверить масло и фильтр", "Осмотреть крепления и зазоры"],
+    caution: "Общий уровень скорости может оставаться нормальным на ранней стадии дефекта.",
+  },
+};
+
+export function diagnose(symptom) {
+  return DIAGNOSTICS[symptom] || DIAGNOSTICS["1x"];
+}
+
+export function safeProgress(raw) {
+  const fallback = { completed: [], mistakes: [], current: "chapter-1" };
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!parsed || typeof parsed !== "object") return fallback;
+    return {
+      completed: Array.isArray(parsed.completed) ? [...new Set(parsed.completed.filter((item) => typeof item === "string"))] : [],
+      mistakes: Array.isArray(parsed.mistakes) ? parsed.mistakes.filter((item) => typeof item === "string") : [],
+      current: typeof parsed.current === "string" ? parsed.current : "chapter-1",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function groupBlocks(blocks) {
+  const groups = [];
+  for (const block of blocks) {
+    const listType = block.type === "step" ? "step-list" : block.type === "bullet" ? "bullet-list" : null;
+    const previous = groups[groups.length - 1];
+    if (listType && previous?.type === listType) {
+      previous.items.push(block.text);
+    } else if (listType) {
+      groups.push({ type: listType, items: [block.text] });
+    } else {
+      groups.push({ ...block });
+    }
+  }
+  return groups;
+}
+
