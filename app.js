@@ -1,4 +1,4 @@
-import { rotationalFrequency, bladePassFrequency, meshFrequency, vibrationVelocity, diagnose, safeProgress, groupBlocks } from "./logic.js";
+import { rotationalFrequency, bladePassFrequency, meshFrequency, vibrationVelocity, diagnose, safeProgress, groupBlocks, formatFormula } from "./logic.js";
 
 const content = await fetch("./content.json").then((response) => response.json());
 const storageKey = "equipment-diagnostics-progress-v1";
@@ -44,8 +44,9 @@ function renderBlocks(blocks) {
   return groupBlocks(blocks).map((block) => {
     if (block.type === "step-list") return `<ol>${block.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`;
     if (block.type === "bullet-list") return `<ul>${block.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+    if (block.type === "subheading") return `<h3 class="lesson-subheading">${escapeHtml(block.text)}</h3>`;
     const text = escapeHtml(block.text);
-    if (block.type === "formula") return `<div class="formula">${text}</div>`;
+    if (block.type === "formula") return `<div class="formula" role="math">${formatFormula(block.text)}</div>`;
     return `<p>${text}</p>`;
   }).join("");
 }

@@ -75,6 +75,10 @@ export function safeProgress(raw) {
 export function groupBlocks(blocks) {
   const groups = [];
   for (const block of blocks) {
+    if (block.type === "text" && /^###\s+/.test(block.text)) {
+      groups.push({ type: "subheading", text: block.text.replace(/^###\s+/, "") });
+      continue;
+    }
     const listType = block.type === "step" ? "step-list" : block.type === "bullet" ? "bullet-list" : null;
     const previous = groups[groups.length - 1];
     if (listType && previous?.type === listType) {
@@ -86,5 +90,23 @@ export function groupBlocks(blocks) {
     }
   }
   return groups;
+}
+
+const FORMULA_MARKUP = {
+  "m x_ddot + c x_dot + k x = F(t)": "<var>m</var><var>ẍ</var> + <var>c</var><var>ẋ</var> + <var>k</var><var>x</var> = <var>F</var>(<var>t</var>)",
+  "omega_n = sqrt(k / m)": "ω<sub>n</sub> = √(<var>k</var> / <var>m</var>)",
+  "f_rot = n / 60": "<var>f</var><sub>rot</sub> = <var>n</var> / 60",
+  "A_rms = A_peak / sqrt(2)": "<var>A</var><sub>rms</sub> = <var>A</var><sub>peak</sub> / √2",
+  "v_peak = 2 pi f x_peak": "<var>v</var><sub>peak</sub> = 2π<var>f</var><var>x</var><sub>peak</sub>",
+  "a_peak = (2 pi f)^2 x_peak": "<var>a</var><sub>peak</sub> = (2π<var>f</var>)<sup>2</sup><var>x</var><sub>peak</sub>",
+  "f_s >= 2 f_max": "<var>f</var><sub>s</sub> ≥ 2<var>f</var><sub>max</sub>",
+  "Delta f = 1 / T": "Δ<var>f</var> = 1 / <var>T</var>",
+  "F = m e omega^2": "<var>F</var> = <var>m</var><var>e</var>ω<sup>2</sup>",
+  "f_mesh = z f_rot": "<var>f</var><sub>mesh</sub> = <var>z</var><var>f</var><sub>rot</sub>",
+};
+
+export function formatFormula(formula) {
+  const text = String(formula);
+  return FORMULA_MARKUP[text] || text.replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;" })[character]);
 }
 
