@@ -57,15 +57,20 @@ export function diagnose(symptom) {
   return DIAGNOSTICS[symptom] || DIAGNOSTICS["1x"];
 }
 
+function uniqueStringIds(value) {
+  return Array.isArray(value) ? [...new Set(value.filter((item) => typeof item === "string"))] : [];
+}
+
 export function safeProgress(raw) {
-  const fallback = { completed: [], mistakes: [], current: "chapter-1" };
+  const fallback = { completed: [], mistakes: [], current: "chapter-1", interactionsCompleted: [] };
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!parsed || typeof parsed !== "object") return fallback;
     return {
-      completed: Array.isArray(parsed.completed) ? [...new Set(parsed.completed.filter((item) => typeof item === "string"))] : [],
+      completed: uniqueStringIds(parsed.completed),
       mistakes: Array.isArray(parsed.mistakes) ? parsed.mistakes.filter((item) => typeof item === "string") : [],
       current: typeof parsed.current === "string" ? parsed.current : "chapter-1",
+      interactionsCompleted: uniqueStringIds(parsed.interactionsCompleted),
     };
   } catch {
     return fallback;

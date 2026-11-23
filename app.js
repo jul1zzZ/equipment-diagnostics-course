@@ -1,38 +1,91 @@
 import { rotationalFrequency, bladePassFrequency, meshFrequency, vibrationVelocity, diagnose, safeProgress, groupBlocks, formatFormula } from "./logic.js";
+import { completeInteraction, isInteractionComplete, isInteractionId } from "./interaction-logic.js";
+import { escapeHtml, handleInteractionEvent, interactionDefinitions, renderInteraction, renderLessonSections } from "./interactions.js";
 
 const content = await fetch("./content.json").then((response) => response.json());
 const storageKey = "equipment-diagnostics-progress-v1";
-let progress = safeProgress(localStorage.getItem(storageKey));
-let currentModule = content.modules.find((module) => module.id === progress.current) || content.modules[0];
+const chaptersById = new Map(content.modules.map((module) => [module.id, module]));
+const practiceIds = new Set(content.modules.flatMap(interactionDefinitions)
+  .map((definition) => definition?.id).filter(isInteractionId));
+const practiceValues = new Map();
+let progress;
+try {
+  progress = restoreProgress();
+} catch {
+  progress = safeProgress(null);
+}
+const pendingChanges = [];
+const applyChange = (state, change) => change(state);
+let currentModule = chaptersById.get(progress.current);
 let currentSymptom = "1x";
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-function saveProgress(message = "Прогресс сохранён") {
-  localStorage.setItem(storageKey, JSON.stringify(progress));
+function restoreProgress() {
+  const restored = safeProgress(localStorage.getItem(storageKey));
+  restored.completed = restored.completed.filter((id) => chaptersById.has(id));
+  restored.mistakes = restored.mistakes.filter((id) => chaptersById.has(id));
+  if (!chaptersById.has(restored.current)) restored.current = content.modules[0].id;
+  return restored;
+}
+
+async function saveProgress(change, message) {
+  pendingChanges.push(change);
+  try {
+    progress = pendingChanges.reduce(applyChange, restoreProgress());
+  } catch {
+    progress = change(progress);
+  }
   updateProgress();
-  $("#live-status").textContent = message;
+  if (message) $("#live-status").textContent = message;
+
+  const write = () => {
+    // Include earlier unsaved actions, and keep later clicks visible while they wait.
+    const count = pendingChanges.indexOf(change) + 1;
+    if (!count) return;
+    try {
+      const stored = restoreProgress();
+      const updated = pendingChanges.slice(0, count).reduce(applyChange, stored);
+      if (updated !== stored) localStorage.setItem(storageKey, JSON.stringify(updated));
+      pendingChanges.splice(0, count);
+      progress = pendingChanges.reduce(applyChange, updated);
+      updateProgress();
+    } catch {
+      $("#live-status").textContent = "Не удалось сохранить прогресс.";
+    }
+  };
+  // Web Locks serialize the read and write across tabs on HTTPS and localhost.
+  try {
+    const locks = globalThis.navigator?.locks;
+    if (locks) {
+      await locks.request(storageKey, write);
+      return;
+    }
+  } catch (error) {
+    if (error.name !== "SecurityError") throw error;
+  }
+  write();
 }
 
 function updateProgress() {
   const percent = Math.round((progress.completed.length / content.modules.length) * 100);
   $("#header-progress-value").textContent = `${percent}%`;
   $("#header-progress-bar").style.width = `${percent}%`;
+  const completedPractices = progress.interactionsCompleted.filter((id) => practiceIds.has(id)).length;
+  $("#practice-progress-value").textContent = `${completedPractices} / ${practiceIds.size}`;
   const continueButton = $("#continue-button");
-  continueButton.textContent = percent ? "Продолжить обучение" : "Начать с первой главы";
+  continueButton.textContent = percent || progress.current !== content.modules[0].id
+    ? "Продолжить обучение"
+    : "Начать с первой главы";
 }
 
-function showView(name) {
+function showView(name, moduleId) {
   $$("[data-view-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.viewPanel === name));
   $$('[data-view]').forEach((button) => button.classList.toggle("active", button.dataset.view === name));
-  if (name === "course") renderLesson(currentModule.id);
+  if (name === "course") openLesson(moduleId);
   if (name === "trainer") renderDiagnostic();
   if (name === "glossary") renderGlossary();
   window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]);
 }
 
 function renderModuleList(filter = "") {
@@ -52,12 +105,28 @@ function renderBlocks(blocks) {
   }).join("");
 }
 
-function renderLesson(moduleId) {
-  currentModule = content.modules.find((module) => module.id === moduleId) || currentModule;
-  progress.current = currentModule.id;
-  saveProgress("Открыта новая глава");
+function openLesson(moduleId, completedId) {
+  const next = chaptersById.get(moduleId) || currentModule;
+  saveProgress((state) => ({
+    ...state,
+    current: next.id,
+    completed: completedId && !state.completed.includes(completedId) ? [...state.completed, completedId] : state.completed,
+  }), completedId ? "Глава отмечена как изученная" : "Открыта глава");
+  currentModule = next;
+  renderLesson();
+}
+
+function renderLesson() {
   renderModuleList($("#module-search")?.value || "");
-  $("#lesson-content").innerHTML = `<p class="signal-label">Глава ${currentModule.number} из 17</p><h1>${escapeHtml(currentModule.title)}</h1><p class="lesson-summary">${escapeHtml(currentModule.summary)}</p>${currentModule.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2>${renderBlocks(section.blocks)}</section>`).join("")}`;
+  const sections = renderLessonSections(
+    currentModule,
+    (section) => `<section><h2>${escapeHtml(section.title)}</h2>${renderBlocks(section.blocks)}</section>`,
+    (definition) => renderInteraction(definition, {
+      values: practiceValues.get(definition.id),
+      completed: isInteractionComplete(progress, definition.id),
+    }),
+  );
+  $("#lesson-content").innerHTML = `<p class="signal-label">Глава ${currentModule.number} из 17</p><h1>${escapeHtml(currentModule.title)}</h1><p class="lesson-summary">${escapeHtml(currentModule.summary)}</p>${sections}`;
   const quiz = currentModule.quiz;
   $("#lesson-rail").innerHTML = `<div class="quiz-card"><p class="signal-label">Проверьте себя</p><h2>${escapeHtml(quiz.question)}</h2><div>${quiz.options.map((option, index) => `<button class="quiz-option" data-answer="${index}">${escapeHtml(option)}</button>`).join("")}</div><p id="quiz-feedback" aria-live="polite"></p></div><button class="primary complete-button">${progress.completed.includes(currentModule.id) ? "Глава изучена" : "Отметить как изученную"}</button><p class="rail-note">Правильный ответ — это проверка понимания, а не оценка. Ошибки можно повторить позже.</p>`;
   $("#lesson-content").focus({ preventScroll: true });
@@ -65,25 +134,25 @@ function renderLesson(moduleId) {
 
 function answerQuiz(index, button) {
   const correct = currentModule.quiz.answer;
+  const chapterId = currentModule.id;
   $$(".quiz-option").forEach((item) => item.disabled = true);
   button.classList.add(index === correct ? "correct" : "wrong");
   if (index !== correct) {
     $$(".quiz-option")[correct].classList.add("correct");
-    if (!progress.mistakes.includes(currentModule.id)) progress.mistakes.push(currentModule.id);
     $("#quiz-feedback").textContent = "Пока нет. Правильный вариант подсвечен — вернитесь к объяснению слева.";
   } else {
-    progress.mistakes = progress.mistakes.filter((id) => id !== currentModule.id);
     $("#quiz-feedback").textContent = "Верно. Вы связали признак с правильным принципом.";
   }
-  saveProgress("Ответ сохранён");
+  saveProgress((state) => {
+    const mistakes = state.mistakes.filter((id) => id !== chapterId);
+    if (index !== correct) mistakes.push(chapterId);
+    return { ...state, mistakes };
+  }, "Ответ сохранён");
 }
 
 function completeModule() {
-  if (!progress.completed.includes(currentModule.id)) progress.completed.push(currentModule.id);
   const next = content.modules[currentModule.number] || currentModule;
-  progress.current = next.id;
-  saveProgress("Глава отмечена как изученная");
-  renderLesson(next.id);
+  openLesson(next.id, currentModule.id);
 }
 
 function renderDiagnostic() {
@@ -153,11 +222,22 @@ document.addEventListener("click", (event) => {
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) showView(viewButton.dataset.view);
   const moduleButton = event.target.closest("[data-module]");
-  if (moduleButton) { showView("course"); renderLesson(moduleButton.dataset.module); }
+  if (moduleButton) showView("course", moduleButton.dataset.module);
   const answer = event.target.closest("[data-answer]");
   if (answer) answerQuiz(Number(answer.dataset.answer), answer);
   if (event.target.closest(".complete-button")) completeModule();
 });
+const lessonContent = $("#lesson-content");
+for (const type of ["click", "input", "change"]) {
+  lessonContent.addEventListener(type, (event) => handleInteractionEvent(event, {
+    definitions: interactionDefinitions(currentModule),
+    valuesById: practiceValues,
+    onComplete(id) {
+      saveProgress((state) => completeInteraction(state, id));
+    },
+  }));
+}
+
 $("#continue-button").addEventListener("click", () => showView("course"));
 $("#module-search").addEventListener("input", (event) => renderModuleList(event.target.value));
 document.addEventListener("click", (event) => {
